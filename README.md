@@ -3,7 +3,7 @@ Arduino and ESP32-based medical reminder system developed (in ONE morning) durin
 
 ## Demo Video
 
-Watch the project in action: [Medical Reminder System Demo](https://youtube.com/shorts/JFz9XWkBTls)
+Watch the project in action: [Medical Reminder System Demo](https://youtube.com/shorts/60C78X1g6s4)
 
 ## Project Purpose
 The goal of this project is to make post-surgical recovery easier and more accessible by helping patients stay on top of their daily recovery tasks. The physical reminder system provides a simple alternative for patients who may have difficulty navigating software-based recovery platforms.
