@@ -31,7 +31,7 @@ The goal of this project is to make post-surgical recovery easier and more acces
 
 ## How It Works
 - The LCD displays a status of "Completed" or "Not Completed"  based on what the patient sets it to.
-- The LED matrix provides a visual indication of the current task status with a check mark design or X design.
+- The LED matrix provides a visual indication of the current task status with a check mark design or circle to dot design.
 - The passive buzzer generates an audible alert that changes frequency based on mode its set to.
 - Once the patient completes the task, they press the push button to confirm completion.
 - The microcontrollers communicate to update the system's task completion status.
