@@ -1,0 +1,58 @@
+// Import LCD library
+#include <LiquidCrystal.h>
+
+// Define LCD connection pins
+LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
+
+// Track task completion status
+bool completed = false;
+
+void setup() {
+  // Initialize the 16x2 LCD
+  lcd.begin(16, 2);
+
+  // Start serial communication with ESP32
+  Serial1.begin(9600);
+
+  // Set reading timeout to 50 milliseconds
+  Serial1.setTimeout(50);
+
+  // Display initial task status
+  lcd.print("Status:");
+  lcd.setCursor(0, 1);
+  lcd.print("Not completed");
+}
+
+void loop() {
+  // Check for incoming messages from ESP32
+  if (Serial1.available()) {
+
+    // Read incoming message
+    String message = Serial1.readStringUntil('\n');
+
+    // Remove extra whitespace
+    message.trim();
+
+    // Check if the task is completed
+    if (message == "TAKEN" && !completed) {
+      completed = true;
+
+      // Update LCD to display completed
+      lcd.clear();
+      lcd.print("Status:");
+      lcd.setCursor(0, 1);
+      lcd.print("Completed");
+    }
+
+    // Check if the task has been reset
+    else if (message == "RESET" && completed) {
+      completed = false;
+
+      // Update LCD to display not completed
+      lcd.clear();
+      lcd.print("Status:");
+      lcd.setCursor(0, 1);
+      lcd.print("Not completed");
+    }
+  }
+}
