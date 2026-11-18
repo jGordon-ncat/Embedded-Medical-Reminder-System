@@ -1,0 +1,274 @@
+#include <MD_MAX72xx.h>
+#include <SPI.h>
+#include <SevSeg.h>
+
+SevSeg sevseg;
+
+//Define type of LED matrix being used and assign the connected pins to each hardware component
+#define HARDWARE_TYPE MD_MAX72XX::FC16_HW
+#define MAX_DEVICES 1
+
+#define DATA_PIN 23
+#define CLK_PIN 18
+#define CS_PIN 5
+#define BUTTON_PIN 25
+#define BUZZER_PIN 26
+
+
+
+bool matrixOn = false; //Tracks whether task is being completed
+unsigned long startTime = 0; //Stores when the timer started.
+unsigned long lastFrameTime = 0; //Stores when the animation last changed.
+unsigned long previousSeconds = 0; //Stores the previous number of seconds displayed.
+
+// Tracks when information was last sent to arduino
+unsigned long lastLCDUpdate = 0;
+
+//Tracks the current animation frame
+int frame = 0;
+
+// 7-segment display connections
+byte numDigits = 4;
+
+byte digitPins[] = {32, 33, 21, 15};
+
+// A, B, C, D, E, F, G
+//Assigned pins to the seven individual segments that form each number. You also created an object to control the LED matrix.
+byte segmentPins[] = {17, 14, 4, 16, 19, 13, 22};
+
+bool resistorsOnSegments = false;
+
+
+MD_MAX72XX matrix = MD_MAX72XX(
+  HARDWARE_TYPE, DATA_PIN, CLK_PIN,
+  CS_PIN, MAX_DEVICES
+);
+
+// Array of binary values that stores the LED pattern for the checkmark design.
+byte checkmark[8] = {
+  B00000000,
+  B10000000,
+  B11000000,
+  B01100000,
+  B00110001,
+  B00011011,
+  B00001110,
+  B00000100
+};
+
+// Circle-to-dot animation
+//Four different binary patterns that represent a circle gradually shrinking into a dot.
+byte animation[4][8] = {
+  {
+    B00111100,
+    B01000010,
+    B10000001,
+    B10000001,
+    B10000001,
+    B10000001,
+    B01000010,
+    B00111100
+  },
+  {
+    B00000000,
+    B00111100,
+    B01000010,
+    B01000010,
+    B01000010,
+    B01000010,
+    B00111100,
+    B00000000
+  },
+  {
+    B00000000,
+    B00000000,
+    B00011000,
+    B00100100,
+    B00100100,
+    B00011000,
+    B00000000,
+    B00000000
+  },
+  {
+    B00000000,
+    B00000000,
+    B00000000,
+    B00011000,
+    B00011000,
+    B00000000,
+    B00000000,
+    B00000000
+  }
+};
+
+//Array that determines the order in which the animation frames are displayed
+int frameOrder[] = {0, 1, 2, 3, 2, 1};
+
+// Display LED circle to checkmark design pattern
+void displayPattern(byte pattern[]) {
+
+  matrix.control(MD_MAX72XX::UPDATE, MD_MAX72XX::OFF);
+
+  for (int row = 0; row < 8; row++) {
+    for (int col = 0; col < 8; col++) {
+      matrix.setPoint(
+        row, col, bitRead(pattern[row], 7 - col)
+      );
+    }
+  }
+
+//Enables automatic updates on the LED matrix, allowing changes made in the code to appear on the physical display.
+  matrix.control(MD_MAX72XX::UPDATE, MD_MAX72XX::ON);
+}
+
+void setup() {
+
+  // NEW: Start communication with Arduino
+  Serial.begin(9600);
+
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+  pinMode(BUZZER_PIN, OUTPUT);
+
+  // Keep unused decimal point OFF
+  pinMode(27, OUTPUT);
+  digitalWrite(27, LOW);
+
+  // Initializes and prepares the LED matrix for use.
+  matrix.begin();
+  matrix.control(MD_MAX72XX::INTENSITY, 15);
+  matrix.clear();
+
+  // Initialize and prepare the 7-segment display
+  sevseg.begin(
+    COMMON_CATHODE,
+    4,
+    digitPins,
+    segmentPins,
+    false,
+    true,
+    false,
+    true
+  );
+
+  //This section sets the initial brightness and displayed number of 4-digit seven-segment display.
+  sevseg.setBrightness(40);
+  sevseg.setNumber(0);
+
+  startTime = millis();
+  lastFrameTime = millis();
+
+  displayPattern(animation[0]);
+
+  // NEW: Initial LCD status
+  Serial.println("RESET");
+}
+
+void loop() {
+
+  // Refresh display continuously
+  sevseg.refreshDisplay();
+
+  unsigned long currentTime = millis();
+
+  // Prevents one button press from accidentally registering multiple times.
+  static bool lastReading = HIGH;
+  static bool buttonState = HIGH;
+  static unsigned long lastDebounceTime = 0;
+
+  bool reading = digitalRead(BUTTON_PIN);
+
+  if (reading != lastReading) {
+    lastDebounceTime = currentTime;
+  }
+
+// Ensure the button reading is stable for 50ms
+  if (currentTime - lastDebounceTime >= 50) {
+
+  // Check if the button state has changed
+    if (reading != buttonState) {
+
+      buttonState = reading;
+      
+    // Detect when the button is pressed
+      if (buttonState == LOW) {
+
+        matrixOn = !matrixOn;
+
+        if (matrixOn) {
+
+          // Stop and reset timer
+          previousSeconds = 0;
+          sevseg.setNumber(0);
+
+          // Show checkmark
+          displayPattern(checkmark);
+
+          // Confirmation sound
+          tone(BUZZER_PIN, 2500, 200);
+
+          // NEW: LCD displays Completed
+          Serial.println("TAKEN");
+
+        } else {
+
+          // Restart timer
+          startTime = currentTime;
+          lastFrameTime = currentTime;
+          previousSeconds = 0;
+
+          frame = 0;
+
+          sevseg.setNumber(0);
+
+          // Restart animation
+          displayPattern(animation[0]);
+
+          tone(BUZZER_PIN, 800, 200);
+
+          // NEW: LCD displays Not completed
+          Serial.println("RESET");
+        }
+      }
+    }
+  }
+
+  lastReading = reading;
+
+  // Run timer and animation
+  if (!matrixOn) {
+
+    unsigned long seconds =
+      (currentTime - startTime) / 1000;
+
+    if (seconds != previousSeconds) {
+
+      previousSeconds = seconds;
+
+      sevseg.setNumber(seconds % 10000);
+    }
+
+    sevseg.refreshDisplay();
+
+    // Continuous circle animation
+    if (currentTime - lastFrameTime >= 300) {
+
+      lastFrameTime = currentTime;
+
+      frame = (frame + 1) % 6;
+
+      displayPattern(animation[frameOrder[frame]]);
+    }
+  }
+
+  // Every second, the ESP32 checks whether the task is completed and sends the status to the Arduino to keep the LCD updated.
+  if (currentTime - lastLCDUpdate >= 1000) {
+
+    lastLCDUpdate = currentTime;
+
+    if (matrixOn) {
+      Serial.println("TAKEN");
+    } else {
+      Serial.println("RESET");
+    }
+  }
+}
