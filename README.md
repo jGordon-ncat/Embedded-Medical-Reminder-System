@@ -7,7 +7,6 @@ Watch the project in action: [Medical Reminder System Demo](https://youtube.com/
 
 ## Project Purpose
 The goal of this project is to make post-surgical recovery easier and more accessible by helping patients stay on top of their daily recovery tasks. The physical reminder system provides a simple alternative for patients who may have difficulty navigating software-based recovery platforms.
-This prototype demonstrates the core functionality of the Medical Reminder System. The system integrates two microcontrollers and multiple electronic components to provide visual and audible reminders, process patient input, and display task completion status.
 
 ## Features
 - LCD display for daily recovery tasks and reminders
@@ -49,6 +48,10 @@ This prototype demonstrates the core functionality of the Medical Reminder Syste
 - Passive buzzer control
 - Conditional statements
 - Boolean state variables
+
+## Circuit Closeup
+![Circuit](images/image.png)
+This prototype demonstrates the core functionality of the Medical Reminder System. The system integrates two microcontrollers and multiple electronic components to provide visual and audible reminders, process patient input, and display task completion status.
 
 ## Future Improvements
 - Integration with the AI-powered recovery platform
